@@ -9,9 +9,17 @@ import subprocess
 
 
 class TicT500:
-    def __init__(self, device_number):
+    def __init__(self, device_number=None):
+        if device_number is None:
+            device_number = self.pick_a_device()
         self.device_number = device_number
         self.deg_per_step = 1.0
+
+    def pick_a_device(self):
+        self._check_errors()
+
+        devices = self.list()
+        return list(devices.keys())[0]
 
     def get_steps(self, degrees):
         return int(degrees * self.deg_per_step)
@@ -36,17 +44,32 @@ class TicT500:
         time.sleep(0.05)
         self.deenergize()
 
-    def status(self):
+    def _check_errors(self):
         raw_status = TicT500._ticcmd('-s', '--full')
         if raw_status.startswith("Error:"):
             tic_list = TicT500._ticcmd('--list')
             raise RuntimeError("ticcmd returned an error: '%s'\n"
                                "list of Tic's:\n%s" % (raw_status, tic_list))
-        return yaml.safe_load(raw_status)
+        return raw_status
+
+    def status(self):
+        return yaml.safe_load(self._check_errors())
 
     @staticmethod
     def _ticcmd(*args):
         return subprocess.check_output(['ticcmd'] + list(args))
+
+    # General options
+
+    def list(self):
+        raw_list = self._ticcmd("--list")
+
+        devices = {}
+        for line in raw_list.splitlines():
+            device_serial, name = line.split(",")
+            name = name.strip()
+            devices[device_serial] = name
+        return devices
 
     # Control commands
 
@@ -152,4 +175,3 @@ class TicT500:
     def get_settings(self, output_path):
         # Read device settings and write to file.
         self._ticcmd("-d", self.device_number, "--get-settings", output_path)
-
