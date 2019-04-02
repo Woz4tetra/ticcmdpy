@@ -45,9 +45,9 @@ class TicT500:
         self.deenergize()
 
     def _check_errors(self):
-        raw_status = TicT500._ticcmd('-s', '--full')
+        raw_status = TicT500._ticcmd('-s', '--full').decode()
         if raw_status.startswith("Error:"):
-            tic_list = TicT500._ticcmd('--list')
+            tic_list = TicT500._ticcmd('--list').decode()
             raise RuntimeError("ticcmd returned an error: '%s'\n"
                                "list of Tic's:\n%s" % (raw_status, tic_list))
         return raw_status
@@ -57,12 +57,12 @@ class TicT500:
 
     @staticmethod
     def _ticcmd(*args):
-        return subprocess.check_output(['ticcmd'] + list(args))
+        return subprocess.check_output(['ticcmd'] + [str(arg) for arg in args])
 
     # General options
 
     def list(self):
-        raw_list = self._ticcmd("--list")
+        raw_list = self._ticcmd("--list").decode()
 
         devices = {}
         for line in raw_list.splitlines():
